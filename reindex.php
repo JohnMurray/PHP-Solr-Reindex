@@ -34,6 +34,9 @@
 	$ignore_fields = array(
 		
 	);
+
+  /* Set Timezone (for status messages) */
+  date_default_timezone_set('America/New_York');
 		
 	/**********************************************************/
 	// Class definitions - edit at your own risk
