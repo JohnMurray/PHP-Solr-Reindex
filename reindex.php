@@ -1,13 +1,12 @@
+#!/usr/bin/env php
+
 <?php
 	/* Solr Connectivity */
 	define('SOLR_HOST','http://0.0.0.0');			/* Hostname */
 	define('SOLR_PORT','8983');						/* Port */
 	define('SOLR_PATH','/solr/');					/* Default Solr path (usually /solr/) */
-	define('SOLR_CORE','my_core/');					/* Core */
+	define('SOLR_CORE','core1/');					/* Core */
 	define('SOLR_WRITER_TYPE','json');				/* Writer Type - output type.  Currently only 'json' is supported. */
-	
-	/* Solr Version Flag */
-	define('SOLR_VERSION', '3.1');					/* Define Solr version.  3.2 and higher allow more optimized JSON formatting. */
 	
 	/* Performance Options */
 	define('PAGINATE_ROWS',1000);					/* Number of docs to show per page */
@@ -98,9 +97,12 @@
 			));
 			
 			//Execute post
-			$solr_response = simplexml_load_string(curl_exec($ch));
+      // echo curl_exec($ch);
+      // self::rollback();
+      // exit(1);
+			$solr_response = json_decode(curl_exec($ch));
 						
-			return (int) $solr_response->lst->int[0];
+			return (int) $solr_response->responseHeader->status;
 		}
 
 		/**
@@ -119,10 +121,25 @@
 			curl_setopt($ch,CURLOPT_POST,true);
 			
 			//Execute post
-			$solr_response = simplexml_load_string(curl_exec($ch));
+			$solr_response = json_decode(curl_exec($ch));
 						
-			return (int) $solr_response->lst->int[0];
+			return (int) $solr_response->responseHeader->status;
 		}
+
+    public static function rollback() {
+      $ch = self::init_curl();
+
+      $url = SOLR_HOST . SOLR_PATH . SOLR_CORE . 'update?rollback=true';
+      curl_setopt($ch, CURLOPT_URL, $url);
+
+      curl_setopt($ch, CURLOPT_POST, true);
+
+      //Execute post
+			$solr_response = json_decode(curl_exec($ch));
+						
+			return (int) $solr_response->responseHeader->status;
+    }
+
 		
 		/**
 	     *  sends an optimize statement to solr
@@ -136,6 +153,13 @@
 
 			$url = SOLR_HOST . SOLR_PATH . SOLR_CORE . '?optimize=true';
 			curl_setopt($ch, CURLOPT_URL, $url);
+
+      curl_setopt($ch, CURLOPT_POST, true);
+
+      //Execute post
+			$solr_response = json_decode(curl_exec($ch));
+						
+			return (int) $solr_response->responseHeader->status;
 		}
 		
 		/**
@@ -204,11 +228,6 @@
 		//Initialize solr wrapper
 		$solr_array = array();
 		
-		//If Solr is 3.2 or higher add the 'add' => 'doc' wrapper
-		if(SOLR_VERSION >= 3.2) {
-			$solr_array = array('add' => array('doc' => array()));
-		}
-		
 		//Loop through returned documents
 		foreach($data['response']['docs'] as $doc) {
 			//Increment document count
@@ -232,11 +251,7 @@
 			}
 						
 			//Append data to solr array			
-			if(SOLR_VERSION >= 3.2) {
-				$solr_array['add']['doc'][] = $doc;
-			} else {
-				$solr_array[] = array('add' => array('doc' => $doc));
-			}
+      $solr_array[] = $doc;
 			
 			
 			//Stop if we reached the end of the index
